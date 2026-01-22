@@ -1,0 +1,43 @@
+name: selfcare_buddy
+description: Aplikasi self-care tracker untuk mahasiswa - membantu meningkatkan kesadaran diri terhadap kebiasaan sehat harian.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Local Storage
+  shared_preferences: ^2.2.2
+  
+  # Date & Time Formatting
+  intl: ^0.18.1
+  
+  # UI
+  cupertino_icons: ^1.0.2
+  fl_chart: ^1.1.1
+  table_calendar: ^3.0.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  # Uncomment jika nanti mau pakai custom fonts
+  # fonts:
+  #   - family: Poppins
+  #     fonts:
+  #       - asset: fonts/Poppins-Regular.ttf
+  #       - asset: fonts/Poppins-Medium.ttf
+  #         weight: 500
+  #       - asset: fonts/Poppins-SemiBold.ttf
+  #         weight: 600
