@@ -204,7 +204,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24.0),
                   Text('Daily Activities', style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 16.0),
-                  Column(children: _activities.map((activity) => _buildActivityItem(activity, selfCareProvider, settingsProvider, theme)).toList()),
+                  Column(
+                    children: [
+                      for (int i = 0; i < _activities.length; i++) ...[
+                        _buildActivityItem(_activities[i], selfCareProvider, settingsProvider, theme),
+                        if (i < _activities.length - 1) const SizedBox(height: 12.0),
+                      ]
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -223,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.local_fire_department, color: AppColors.warning, size: 40),
+              const Icon(Icons.local_fire_department, color: AppColors.warning, size: 40),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,76 +277,133 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (activity.interactionType) {
       case 'increment':
         return GlassmorphicContainer(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: ListTile(
-            leading: Icon(activity.icon, color: theme.colorScheme.primary, size: 32),
-            title: Text(activity.title, style: theme.textTheme.titleLarge),
-            subtitle: Text(activity.recommendation, style: theme.textTheme.bodyMedium),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (activity.currentValue > 0)
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    color: theme.colorScheme.error,
-                    tooltip: 'Reset',
-                    onPressed: () => setState(() {
-                      activity.currentValue = 0;
-                      _syncWithProvider(activity, selfCareProvider);
-                    }),
-                  ),
-                notificationIcon,
-                IconButton(
-                  icon: Icon(Icons.remove_circle_outline, color: theme.textTheme.bodyMedium?.color),
-                  onPressed: () => setState(() {
-                    if (activity.currentValue > 0) activity.currentValue--;
-                    _syncWithProvider(activity, selfCareProvider);
-                  }),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(activity.icon, color: theme.colorScheme.primary, size: 32),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(activity.title, style: theme.textTheme.titleLarge),
+                    Text(activity.recommendation, style: theme.textTheme.bodyMedium),
+                  ],
                 ),
-                Text('${activity.currentValue}/${activity.targetValue}', style: theme.textTheme.titleLarge),
-                IconButton(
-                  icon: Icon(Icons.add_circle_outline, color: theme.textTheme.bodyMedium?.color),
-                  onPressed: () => setState(() {
-                    activity.currentValue++;
-                    _syncWithProvider(activity, selfCareProvider);
-                  }),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 180,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (activity.currentValue > 0)
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: IconButton(
+                          icon: const Icon(Icons.refresh),
+                          color: theme.colorScheme.error,
+                          tooltip: 'Reset',
+                          onPressed: () => setState(() {
+                            activity.currentValue = 0;
+                            _syncWithProvider(activity, selfCareProvider);
+                          }),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 40),
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: notificationIcon,
+                    ),
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: IconButton(
+                        icon: Icon(Icons.remove_circle_outline, color: theme.textTheme.bodyMedium?.color),
+                        onPressed: () => setState(() {
+                          if (activity.currentValue > 0) activity.currentValue--;
+                          _syncWithProvider(activity, selfCareProvider);
+                        }),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 40,
+                      child: Center(child: Text('${activity.currentValue}/${activity.targetValue}', style: theme.textTheme.titleSmall)),
+                    ),
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: IconButton(
+                        icon: Icon(Icons.add_circle_outline, color: theme.textTheme.bodyMedium?.color),
+                        onPressed: () => setState(() {
+                          activity.currentValue++;
+                          _syncWithProvider(activity, selfCareProvider);
+                        }),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       case 'log_time_range':
         bool isCompleted = activity.isCompleted();
         bool canLog = activity.startTime != null && activity.endTime != null && !isCompleted;
         return GlassmorphicContainer(
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(activity.title, style: theme.textTheme.titleLarge),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(activity.title, style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 4),
+                        Text(activity.recommendation, style: theme.textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isCompleted || activity.startTime != null || activity.endTime != null)
-                        IconButton(
-                          icon: const Icon(Icons.refresh),
-                          color: theme.colorScheme.error,
-                          tooltip: 'Reset',
-                          onPressed: () => setState(() {
-                            activity.startTime = null;
-                            activity.endTime = null;
-                            activity.status = 'WAITING...';
-                            _syncWithProvider(activity, selfCareProvider);
-                          }),
-                        ),
-                      notificationIcon,
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: IconButton(
+                            icon: const Icon(Icons.refresh),
+                            color: theme.colorScheme.error,
+                            tooltip: 'Reset',
+                            onPressed: () => setState(() {
+                              activity.startTime = null;
+                              activity.endTime = null;
+                              activity.status = 'WAITING...';
+                              _syncWithProvider(activity, selfCareProvider);
+                            }),
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 40),
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: notificationIcon,
+                      ),
                     ],
                   ),
                 ],
               ),
-              Text(activity.recommendation, style: theme.textTheme.bodyMedium),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
