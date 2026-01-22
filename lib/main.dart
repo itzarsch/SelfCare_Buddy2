@@ -122,16 +122,10 @@ class _MainScreenState extends State<MainScreen> {
 
   int _currentIndex = 0;
 
-
-
   final List<Widget> _screens = const [
-
     HomeScreen(),
-
     JourneyScreen(),
-
     PrefsScreen(),
-
   ];
 
 
@@ -142,6 +136,14 @@ class _MainScreenState extends State<MainScreen> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    
+    // Refresh data saat pindah ke Journey tab
+    if (_currentIndex == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<SelfCareProvider>(context, listen: false).refresh();
+      });
+    }
+    
     return Stack(
 
       children: [

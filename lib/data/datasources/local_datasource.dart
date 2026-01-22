@@ -16,16 +16,23 @@ class LocalDatasource {
       final key = _getKeyForDate(log.date);
       final encoded = log.encode();
       
+      print('LocalDatasource: Saving log for ${log.date} with key: $key');
+      print('LocalDatasource: Activities: ${log.completedActivities}');
+      
       // Save the log
       final saved = await _prefs.setString(key, encoded);
+      
+      print('LocalDatasource: Save result: $saved');
       
       // Update list of all dates
       if (saved) {
         await _addDateToList(log.date);
+        print('LocalDatasource: Date added to list');
       }
       
       return saved;
     } catch (e) {
+      print('LocalDatasource: Error saving log: $e');
       return false;
     }
   }
@@ -48,21 +55,28 @@ class LocalDatasource {
   List<DailyLogModel> getAllDailyLogs() {
     try {
       final dates = _getAllDates();
+      print('LocalDatasource: getAllDailyLogs - Found ${dates.length} dates');
+      
       final logs = <DailyLogModel>[];
       
       for (final dateStr in dates) {
         final date = DateTime.parse(dateStr);
         final log = getDailyLog(date);
         if (log != null) {
+          print('LocalDatasource: Loaded log for $dateStr with ${log.completedActivities.length} activities');
           logs.add(log);
+        } else {
+          print('LocalDatasource: No log found for $dateStr');
         }
       }
       
       // Sort by date descending (newest first)
       logs.sort((a, b) => b.date.compareTo(a.date));
       
+      print('LocalDatasource: Returning ${logs.length} logs');
       return logs;
     } catch (e) {
+      print('LocalDatasource: Error in getAllDailyLogs: $e');
       return [];
     }
   }

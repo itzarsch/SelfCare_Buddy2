@@ -45,6 +45,12 @@ class _PrefsScreenState extends State<PrefsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Progress has been reset.')),
         );
+        // Trigger rebuild di HomeScreen dengan kembali ke home tab
+        final mainScreenContext = context;
+        if (mainScreenContext.mounted) {
+          // Refresh provider untuk memastikan semua state ter-update
+          await provider.refresh();
+        }
       }
     }
   }

@@ -10,6 +10,7 @@ class SelfCareProvider extends ChangeNotifier {
   List<DailyLog> _allLogs = [];
   int _streak = 0;
   bool _isLoading = false;
+  int _resetCounter = 0; // Counter untuk track reset
   
   SelfCareProvider(this._repository) 
       : _todayLog = DailyLog(date: DateTime.now(), completedActivities: []) {
@@ -21,6 +22,7 @@ class SelfCareProvider extends ChangeNotifier {
   List<DailyLog> get allLogs => _allLogs;
   int get streak => _streak;
   bool get isLoading => _isLoading;
+  int get resetCounter => _resetCounter; // Getter untuk reset counter
   
   List<Activity> get activities => Activity.allActivities;
   
@@ -59,6 +61,10 @@ class SelfCareProvider extends ChangeNotifier {
   Future<void> loadAllLogs() async {
     try {
       _allLogs = _repository.getAllLogs();
+      debugPrint('SelfCareProvider: Loaded ${_allLogs.length} logs');
+      for (var log in _allLogs) {
+        debugPrint('  - ${log.date}: ${log.completedActivities.length} activities');
+      }
     } catch (e) {
       debugPrint('Error loading all logs: $e');
     }
@@ -67,16 +73,20 @@ class SelfCareProvider extends ChangeNotifier {
   
   // Toggle activity
   Future<bool> toggleActivity(String activityId) async {
+    debugPrint('SelfCareProvider: Toggling activity $activityId');
     final success = await _repository.toggleActivity(
       DateTime.now(),
       activityId,
     );
     
     if (success) {
+      debugPrint('SelfCareProvider: Toggle successful, reloading data');
       await loadTodayLog();
       await loadAllLogs();
       _calculateStreak();
       notifyListeners();
+    } else {
+      debugPrint('SelfCareProvider: Toggle failed');
     }
     
     return success;
@@ -119,9 +129,21 @@ class SelfCareProvider extends ChangeNotifier {
   
   // Clear all data (for testing/reset)
   Future<bool> clearAllData() async {
+    debugPrint('SelfCareProvider: Clearing all data, current resetCounter: $_resetCounter');
     final success = await _repository.clearAllData();
     if (success) {
+      debugPrint('SelfCareProvider: Clear successful, resetting state');
+      // Reset local state
+      _todayLog = DailyLog(date: DateTime.now(), completedActivities: []);
+      _allLogs = [];
+      _streak = 0;
+      _resetCounter++; // Increment reset counter untuk trigger UI reset
+      debugPrint('SelfCareProvider: New resetCounter: $_resetCounter');
+      notifyListeners();
+      // Then refresh to ensure consistency
       await refresh();
+    } else {
+      debugPrint('SelfCareProvider: Clear failed');
     }
     return success;
   }

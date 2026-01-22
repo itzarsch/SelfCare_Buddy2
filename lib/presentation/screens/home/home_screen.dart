@@ -62,8 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   late String _currentQuote;
-  late final List<_Activity> _activities;
+  List<_Activity> _activities = []; // Ubah dari late final ke list biasa
   bool _isActivitiesInitialized = false;
+  int _lastResetCounter = 0; // Track reset counter
 
   @override
   void initState() {
@@ -71,10 +72,32 @@ class _HomeScreenState extends State<HomeScreen> {
     _currentQuote = _motivationalQuotes[Random().nextInt(_motivationalQuotes.length)];
   }
 
-  void _initializeActivities(BuildContext context) {
-    if (_isActivitiesInitialized) return;
+  // Method to reset activities (dipanggil dari luar jika perlu)
+  void resetActivities() {
+    setState(() {
+      _isActivitiesInitialized = false;
+    });
+  }
 
+  void _initializeActivities(BuildContext context) {
     final provider = Provider.of<SelfCareProvider>(context, listen: false);
+    
+    debugPrint('HomeScreen: _initializeActivities called, _isActivitiesInitialized: $_isActivitiesInitialized, provider.resetCounter: ${provider.resetCounter}, _lastResetCounter: $_lastResetCounter');
+    
+    // Check if reset counter has changed
+    if (_isActivitiesInitialized && provider.resetCounter != _lastResetCounter) {
+      debugPrint('HomeScreen: Reset detected in _initializeActivities, reinitializing...');
+      _isActivitiesInitialized = false;
+    }
+    
+    _lastResetCounter = provider.resetCounter;
+    
+    if (_isActivitiesInitialized) {
+      debugPrint('HomeScreen: Activities already initialized, skipping');
+      return;
+    }
+
+    debugPrint('HomeScreen: Initializing activities...');
     _activities = provider.activities.map((domain.Activity domainActivity) {
       final isCompleted = provider.isActivityCompleted(domainActivity.id);
       String interactionType;
@@ -115,8 +138,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _calculateCompletionPercentage() {
     if (!_isActivitiesInitialized || _activities.isEmpty) return 0.0;
-    final completedCount = _activities.where((a) => a.isCompleted()).length;
-    return completedCount / _activities.length;
+    
+    double totalProgress = 0.0;
+    
+    for (var activity in _activities) {
+      if (activity.interactionType == 'increment' && activity.targetValue != null) {
+        // Untuk aktivitas increment, hitung progress parsial
+        final progress = (activity.currentValue / activity.targetValue!).clamp(0.0, 1.0);
+        totalProgress += progress;
+      } else {
+        // Untuk aktivitas lain, hitung 0 atau 1 (completed atau belum)
+        totalProgress += activity.isCompleted() ? 1.0 : 0.0;
+      }
+    }
+    
+    return totalProgress / _activities.length;
   }
 
   Future<void> _selectTime(BuildContext context, _Activity activity, bool isStartTime, SelfCareProvider provider) async {
@@ -135,11 +171,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _initializeActivities(context);
     final theme = Theme.of(context);
 
     return Consumer2<SelfCareProvider, SettingsProvider>(
       builder: (context, selfCareProvider, settingsProvider, child) {
+        // Check for reset inside Consumer to detect changes
+        if (_isActivitiesInitialized && selfCareProvider.resetCounter != _lastResetCounter) {
+          debugPrint('HomeScreen: Reset detected in Consumer, old: $_lastResetCounter, new: ${selfCareProvider.resetCounter}');
+          _lastResetCounter = selfCareProvider.resetCounter;
+          _isActivitiesInitialized = false;
+        }
+        
+        // Initialize or reinitialize activities
+        _initializeActivities(context);
+        
         return Scaffold(
           appBar: AppBar(title: const Text('Selfcare Buddy')),
           body: SingleChildScrollView(
@@ -233,6 +278,16 @@ class _HomeScreenState extends State<HomeScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (activity.currentValue > 0)
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    color: theme.colorScheme.error,
+                    tooltip: 'Reset',
+                    onPressed: () => setState(() {
+                      activity.currentValue = 0;
+                      _syncWithProvider(activity, selfCareProvider);
+                    }),
+                  ),
                 notificationIcon,
                 IconButton(
                   icon: Icon(Icons.remove_circle_outline, color: theme.textTheme.bodyMedium?.color),
@@ -264,7 +319,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(activity.title, style: theme.textTheme.titleLarge),
-                  notificationIcon,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isCompleted || activity.startTime != null || activity.endTime != null)
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          color: theme.colorScheme.error,
+                          tooltip: 'Reset',
+                          onPressed: () => setState(() {
+                            activity.startTime = null;
+                            activity.endTime = null;
+                            activity.status = 'WAITING...';
+                            _syncWithProvider(activity, selfCareProvider);
+                          }),
+                        ),
+                      notificationIcon,
+                    ],
+                  ),
                 ],
               ),
               Text(activity.recommendation, style: theme.textTheme.bodyMedium),
